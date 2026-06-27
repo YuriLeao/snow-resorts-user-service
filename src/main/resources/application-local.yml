@@ -1,0 +1,20 @@
+# Local dev profile ($0). Postgres + MinIO started by `make dev` (docker-compose).
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/snow_resorts?currentSchema=users
+    username: snow
+    password: snow
+
+snow:
+  storage:
+    public-base-url: http://localhost:9000/snow-resorts-assets
+    s3:
+      endpoint: http://localhost:9000
+      region: us-east-1
+      access-key: minioadmin
+      secret-key: minioadmin
+      path-style-access: true
+
+logging:
+  level:
+    com.snowresorts.user: DEBUG

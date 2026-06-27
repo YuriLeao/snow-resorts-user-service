@@ -1,0 +1,11 @@
+# AWS profile (staging/prod). Uses real S3 + the default credentials provider chain
+# (task role). No endpoint override and no static keys are configured here.
+snow:
+  storage:
+    public-base-url: ${AVATAR_PUBLIC_BASE_URL:https://assets.snow-resorts.com}
+    s3:
+      endpoint: ""
+      region: ${AWS_REGION:us-east-1}
+      access-key: ""
+      secret-key: ""
+      path-style-access: false
