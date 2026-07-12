@@ -3,6 +3,8 @@ package com.snowresorts.user.infrastructure.web;
 import com.snowresorts.user.application.ProfileService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,9 +25,21 @@ public class InternalProfileController {
         this.profileService = profileService;
     }
 
+    @GetMapping("/usernames/{username}/available")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void ensureUsernameAvailable(@PathVariable String username) {
+        profileService.ensureUsernameAvailable(username);
+    }
+
     @PostMapping("/profiles")
     @ResponseStatus(HttpStatus.CREATED)
     public ProfileResponse bootstrapProfile(@Valid @RequestBody BootstrapProfileRequest request) {
-        return ProfileResponse.from(profileService.bootstrapProfile(request.userId(), request.email()));
+        return ProfileResponse.from(profileService.bootstrapProfile(
+                request.userId(), request.email(), request.username(), request.displayName()));
+    }
+
+    @PostMapping("/profiles/summaries")
+    public ProfileSummariesResponse listSummaries(@Valid @RequestBody ProfileSummariesRequest request) {
+        return new ProfileSummariesResponse(profileService.listSummaries(request.userIds()));
     }
 }

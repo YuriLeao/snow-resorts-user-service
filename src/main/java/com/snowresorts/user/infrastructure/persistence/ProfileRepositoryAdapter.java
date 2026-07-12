@@ -23,6 +23,11 @@ public class ProfileRepositoryAdapter implements Profiles {
     }
 
     @Override
+    public Optional<Profile> findByUsername(String username) {
+        return jpaRepository.findByUsernameIgnoreCase(username).map(this::toDomain);
+    }
+
+    @Override
     public List<Profile> findAllById(List<UUID> userIds) {
         return jpaRepository.findAllById(userIds).stream().map(this::toDomain).toList();
     }
@@ -35,6 +40,7 @@ public class ProfileRepositoryAdapter implements Profiles {
     private Profile toDomain(ProfileEntity entity) {
         return new Profile(
                 entity.getUserId(),
+                entity.getUsername(),
                 entity.getDisplayName(),
                 entity.getAvatarS3Key(),
                 entity.getAvatarUrl(),
@@ -49,6 +55,7 @@ public class ProfileRepositoryAdapter implements Profiles {
     private ProfileEntity toEntity(Profile profile) {
         return new ProfileEntity(
                 profile.userId(),
+                profile.username(),
                 profile.displayName(),
                 profile.avatarS3Key(),
                 profile.avatarUrl(),

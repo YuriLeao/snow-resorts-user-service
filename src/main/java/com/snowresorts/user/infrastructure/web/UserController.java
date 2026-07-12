@@ -2,6 +2,7 @@ package com.snowresorts.user.infrastructure.web;
 
 import com.snowresorts.security.SecurityUtils;
 import com.snowresorts.user.application.AvatarService;
+import com.snowresorts.user.application.PresenceService;
 import com.snowresorts.user.application.ProfileService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -26,10 +27,14 @@ public class UserController {
 
     private final ProfileService profileService;
     private final AvatarService avatarService;
+    private final PresenceService presenceService;
 
-    public UserController(ProfileService profileService, AvatarService avatarService) {
+    public UserController(ProfileService profileService,
+                          AvatarService avatarService,
+                          PresenceService presenceService) {
         this.profileService = profileService;
         this.avatarService = avatarService;
+        this.presenceService = presenceService;
     }
 
     @GetMapping("/me")
@@ -42,7 +47,8 @@ public class UserController {
     public ProfileResponse updateMyProfile(@Valid @RequestBody UpdateProfileRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         return ProfileResponse.from(profileService.updateMyProfile(
-                userId, request.displayName(), request.shareStats(), request.shareLocation()));
+                userId, request.displayName(), request.username(),
+                request.shareStats(), request.shareLocation()));
     }
 
     @PostMapping("/me/avatar/upload-url")
@@ -62,6 +68,13 @@ public class UserController {
     public void deleteAvatar() {
         UUID userId = SecurityUtils.requireCurrentUserId();
         avatarService.delete(userId);
+    }
+
+    @PutMapping("/me/presence")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void touchPresence() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        presenceService.touch(userId);
     }
 
     @GetMapping("/{id}")

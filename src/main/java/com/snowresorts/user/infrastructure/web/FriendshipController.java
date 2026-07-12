@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,16 +29,14 @@ public class FriendshipController {
     @GetMapping
     public List<FriendSummary> listFriends() {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        return friendshipService.listFriends(userId).stream()
-                .map(FriendSummary::from)
-                .toList();
+        return friendshipService.listFriendSummaries(userId);
     }
 
     @PostMapping("/requests")
     @ResponseStatus(HttpStatus.CREATED)
     public void requestFriend(@Valid @RequestBody FriendRequestRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        friendshipService.request(userId, request.friendId());
+        friendshipService.requestByUsername(userId, request.friendUsername());
     }
 
     @PostMapping("/requests/{requesterId}/accept")
@@ -45,5 +44,25 @@ public class FriendshipController {
     public void acceptRequest(@PathVariable UUID requesterId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         friendshipService.accept(userId, requesterId);
+    }
+
+    @GetMapping("/requests/incoming")
+    public List<FriendRequestSummary> listIncomingRequests() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return friendshipService.listPendingIncomingRequests(userId);
+    }
+
+    @PostMapping("/requests/{requesterId}/reject")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void rejectRequest(@PathVariable UUID requesterId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        friendshipService.reject(userId, requesterId);
+    }
+
+    @DeleteMapping("/{friendId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeFriend(@PathVariable UUID friendId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        friendshipService.removeFriend(userId, friendId);
     }
 }

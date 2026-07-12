@@ -14,4 +14,9 @@ public interface Friendships {
 
     /** Accepted friendships where {@code userId} is the owner of the edge. */
     List<Friendship> listAccepted(UUID userId);
+
+    /** Pending requests where {@code userId} is the target (incoming). */
+    List<Friendship> listPendingIncoming(UUID userId);
+
+    void delete(UUID userId, UUID friendId);
 }

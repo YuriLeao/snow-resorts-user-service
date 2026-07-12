@@ -15,6 +15,9 @@ public class ProfileEntity {
     @Column(name = "user_id", nullable = false, updatable = false)
     private UUID userId;
 
+    @Column(nullable = false, length = 20)
+    private String username;
+
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
@@ -45,10 +48,11 @@ public class ProfileEntity {
     protected ProfileEntity() {
     }
 
-    public ProfileEntity(UUID userId, String displayName, String avatarS3Key, String avatarUrl,
+    public ProfileEntity(UUID userId, String username, String displayName, String avatarS3Key, String avatarUrl,
                          Instant avatarUpdatedAt, UUID lastResortId, String shareStats,
                          String shareLocation, Instant createdAt, Instant updatedAt) {
         this.userId = userId;
+        this.username = username;
         this.displayName = displayName;
         this.avatarS3Key = avatarS3Key;
         this.avatarUrl = avatarUrl;
@@ -62,6 +66,10 @@ public class ProfileEntity {
 
     public UUID getUserId() {
         return userId;
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     public String getDisplayName() {

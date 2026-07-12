@@ -49,7 +49,7 @@ class AvatarServiceTest {
 
     private Profile existingProfile() {
         Instant now = Instant.now();
-        return new Profile(USER_ID, "Rider", null, null, null, null,
+        return new Profile(USER_ID, "rider", "Rider", null, null, null, null,
                 ShareLevel.FRIENDS, ShareLevel.FRIENDS, now, now);
     }
 

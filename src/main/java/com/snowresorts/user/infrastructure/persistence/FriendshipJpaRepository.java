@@ -10,4 +10,6 @@ public interface FriendshipJpaRepository extends JpaRepository<FriendshipEntity,
     Optional<FriendshipEntity> findByUserIdAndFriendId(UUID userId, UUID friendId);
 
     List<FriendshipEntity> findByUserIdAndStatus(UUID userId, String status);
+
+    List<FriendshipEntity> findByFriendIdAndStatus(UUID friendId, String status);
 }

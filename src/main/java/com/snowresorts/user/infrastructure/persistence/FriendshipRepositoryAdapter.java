@@ -34,6 +34,19 @@ public class FriendshipRepositoryAdapter implements Friendships {
                 .toList();
     }
 
+    @Override
+    public List<Friendship> listPendingIncoming(UUID userId) {
+        return jpaRepository.findByFriendIdAndStatus(userId, FriendshipStatus.PENDING.name()).stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public void delete(UUID userId, UUID friendId) {
+        jpaRepository.findByUserIdAndFriendId(userId, friendId)
+                .ifPresent(jpaRepository::delete);
+    }
+
     private Friendship toDomain(FriendshipEntity entity) {
         return new Friendship(
                 entity.getUserId(),

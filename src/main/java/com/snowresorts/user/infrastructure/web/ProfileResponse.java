@@ -11,6 +11,7 @@ import java.util.UUID;
  */
 public record ProfileResponse(
         UUID userId,
+        String username,
         String displayName,
         String avatarUrl,
         Instant avatarUpdatedAt,
@@ -21,6 +22,7 @@ public record ProfileResponse(
     public static ProfileResponse from(Profile profile) {
         return new ProfileResponse(
                 profile.userId(),
+                profile.username(),
                 profile.displayName(),
                 profile.avatarUrl(),
                 profile.avatarUpdatedAt(),

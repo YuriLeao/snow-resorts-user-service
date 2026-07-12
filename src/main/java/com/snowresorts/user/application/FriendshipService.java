@@ -8,9 +8,15 @@ import com.snowresorts.user.domain.model.FriendshipStatus;
 import com.snowresorts.user.domain.model.Profile;
 import com.snowresorts.user.domain.port.Friendships;
 import com.snowresorts.user.domain.port.Profiles;
+import com.snowresorts.user.infrastructure.web.FriendRequestSummary;
+import com.snowresorts.user.infrastructure.web.FriendSummary;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,10 +34,21 @@ public class FriendshipService {
 
     private final Friendships friendships;
     private final Profiles profiles;
+    private final PresenceService presenceService;
 
-    public FriendshipService(Friendships friendships, Profiles profiles) {
+    public FriendshipService(Friendships friendships, Profiles profiles, PresenceService presenceService) {
         this.friendships = friendships;
         this.profiles = profiles;
+        this.presenceService = presenceService;
+    }
+
+    @Transactional
+    public Friendship requestByUsername(UUID requesterId, String friendUsername) {
+        String normalized = ProfileService.requireValidUsername(friendUsername);
+        Profile target = profiles.findByUsername(normalized)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No user found with username '%s'.".formatted(normalized)));
+        return request(requesterId, target.userId());
     }
 
     @Transactional
@@ -43,7 +60,8 @@ public class FriendshipService {
             throw new ConflictException("A friendship or pending request already exists.");
         }
         log.info("User {} requested friendship with {}", requesterId, friendId);
-        return friendships.save(new Friendship(requesterId, friendId, FriendshipStatus.PENDING, Instant.now()));
+        return friendships.save(
+                new Friendship(requesterId, friendId, FriendshipStatus.PENDING, Instant.now()));
     }
 
     /**
@@ -63,6 +81,65 @@ public class FriendshipService {
         friendships.save(new Friendship(requesterId, accepterId, FriendshipStatus.ACCEPTED, pending.createdAt()));
         friendships.save(new Friendship(accepterId, requesterId, FriendshipStatus.ACCEPTED, now));
         log.info("User {} accepted friendship request from {}", accepterId, requesterId);
+    }
+
+    @Transactional
+    public void reject(UUID accepterId, UUID requesterId) {
+        Friendship pending = friendships.find(requesterId, accepterId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No pending friend request from %s was found.".formatted(requesterId)));
+        if (pending.status() != FriendshipStatus.PENDING) {
+            throw new ConflictException("Friend request is not pending.");
+        }
+        friendships.delete(requesterId, accepterId);
+        log.info("User {} rejected friendship request from {}", accepterId, requesterId);
+    }
+
+    @Transactional
+    public void removeFriend(UUID userId, UUID friendId) {
+        Friendship edge = friendships.find(userId, friendId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No friendship with %s was found.".formatted(friendId)));
+        if (edge.status() != FriendshipStatus.ACCEPTED) {
+            throw new ConflictException("Friendship is not active.");
+        }
+        friendships.delete(userId, friendId);
+        friendships.delete(friendId, userId);
+        log.info("User {} removed friendship with {}", userId, friendId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FriendRequestSummary> listPendingIncomingRequests(UUID userId) {
+        List<Friendship> pending = friendships.listPendingIncoming(userId);
+        if (pending.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> requesterIds = pending.stream().map(Friendship::userId).toList();
+        Map<UUID, Profile> profilesById = profiles.findAllById(requesterIds).stream()
+                .collect(Collectors.toMap(Profile::userId, Function.identity()));
+        List<FriendRequestSummary> summaries = new ArrayList<>();
+        for (Friendship edge : pending) {
+            Profile requester = profilesById.get(edge.userId());
+            if (requester != null) {
+                summaries.add(FriendRequestSummary.from(edge, requester));
+            }
+        }
+        return summaries;
+    }
+
+    @Transactional(readOnly = true)
+    public List<FriendSummary> listFriendSummaries(UUID userId) {
+        List<Profile> friends = listFriends(userId);
+        if (friends.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, Instant> lastSeen = presenceService.lastSeenFor(
+                friends.stream().map(Profile::userId).toList());
+        return friends.stream()
+                .map(friend -> FriendSummary.from(
+                        friend,
+                        presenceService.isOnline(friend, lastSeen.get(friend.userId()))))
+                .toList();
     }
 
     @Transactional(readOnly = true)

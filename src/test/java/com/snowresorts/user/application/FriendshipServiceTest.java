@@ -9,11 +9,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.snowresorts.security.error.ConflictException;
+import com.snowresorts.security.error.ResourceNotFoundException;
 import com.snowresorts.user.domain.model.Friendship;
 import com.snowresorts.user.domain.model.FriendshipStatus;
+import com.snowresorts.user.domain.model.Profile;
+import com.snowresorts.user.domain.model.ShareLevel;
 import com.snowresorts.user.domain.port.Friendships;
 import com.snowresorts.user.domain.port.Profiles;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,12 +38,47 @@ class FriendshipServiceTest {
     private Friendships friendships;
     @Mock
     private Profiles profiles;
+    @Mock
+    private PresenceService presenceService;
 
     private FriendshipService service;
 
     @BeforeEach
     void setUp() {
-        service = new FriendshipService(friendships, profiles);
+        service = new FriendshipService(friendships, profiles, presenceService);
+    }
+
+    private Profile requesterProfile() {
+        return new Profile(REQUESTER, "requester", "Requester", null, null, null, null,
+                ShareLevel.FRIENDS, ShareLevel.FRIENDS, Instant.now(), Instant.now());
+    }
+
+    private Profile targetProfile() {
+        return new Profile(TARGET, "target_user", "Target", null, null, null, null,
+                ShareLevel.FRIENDS, ShareLevel.FRIENDS, Instant.now(), Instant.now());
+    }
+
+    @Test
+    @DisplayName("requestByUsername resolves the profile and creates a PENDING edge")
+    void requestByUsername_whenUserExists_createsPending() {
+        when(profiles.findByUsername("target_user")).thenReturn(Optional.of(targetProfile()));
+        when(friendships.find(REQUESTER, TARGET)).thenReturn(Optional.empty());
+        when(friendships.save(any(Friendship.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(profiles.findById(REQUESTER)).thenReturn(Optional.of(requesterProfile()));
+
+        Friendship created = service.requestByUsername(REQUESTER, "@target_user");
+
+        assertThat(created.status()).isEqualTo(FriendshipStatus.PENDING);
+        assertThat(created.friendId()).isEqualTo(TARGET);
+    }
+
+    @Test
+    @DisplayName("requestByUsername when username is unknown returns 404")
+    void requestByUsername_whenUnknown_throwsNotFound() {
+        when(profiles.findByUsername("missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.requestByUsername(REQUESTER, "missing"))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -47,6 +86,7 @@ class FriendshipServiceTest {
     void request_whenNoneExists_createsPending() {
         when(friendships.find(REQUESTER, TARGET)).thenReturn(Optional.empty());
         when(friendships.save(any(Friendship.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(profiles.findById(REQUESTER)).thenReturn(Optional.of(requesterProfile()));
 
         Friendship created = service.request(REQUESTER, TARGET);
 
@@ -83,5 +123,44 @@ class FriendshipServiceTest {
         assertThat(captor.getAllValues())
                 .anyMatch(f -> f.userId().equals(REQUESTER) && f.friendId().equals(TARGET))
                 .anyMatch(f -> f.userId().equals(TARGET) && f.friendId().equals(REQUESTER));
+    }
+
+    @Test
+    @DisplayName("listPendingIncomingRequests returns requester profiles for incoming PENDING edges")
+    void listPendingIncomingRequests_withPending_returnsSummaries() {
+        Instant requestedAt = Instant.parse("2026-01-01T12:00:00Z");
+        when(friendships.listPendingIncoming(TARGET)).thenReturn(List.of(
+                new Friendship(REQUESTER, TARGET, FriendshipStatus.PENDING, requestedAt)));
+        when(profiles.findAllById(List.of(REQUESTER))).thenReturn(List.of(requesterProfile()));
+
+        var summaries = service.listPendingIncomingRequests(TARGET);
+
+        assertThat(summaries).hasSize(1);
+        assertThat(summaries.get(0).userId()).isEqualTo(REQUESTER);
+        assertThat(summaries.get(0).username()).isEqualTo("requester");
+        assertThat(summaries.get(0).requestedAt()).isEqualTo(requestedAt);
+    }
+
+    @Test
+    @DisplayName("reject deletes a pending request from requester to accepter")
+    void reject_withPendingRequest_deletesEdge() {
+        when(friendships.find(REQUESTER, TARGET)).thenReturn(Optional.of(
+                new Friendship(REQUESTER, TARGET, FriendshipStatus.PENDING, Instant.now())));
+
+        service.reject(TARGET, REQUESTER);
+
+        verify(friendships).delete(REQUESTER, TARGET);
+    }
+
+    @Test
+    @DisplayName("removeFriend deletes accepted edges in both directions")
+    void removeFriend_withAccepted_deletesBothEdges() {
+        when(friendships.find(TARGET, REQUESTER)).thenReturn(Optional.of(
+                new Friendship(TARGET, REQUESTER, FriendshipStatus.ACCEPTED, Instant.now())));
+
+        service.removeFriend(TARGET, REQUESTER);
+
+        verify(friendships).delete(TARGET, REQUESTER);
+        verify(friendships).delete(REQUESTER, TARGET);
     }
 }
