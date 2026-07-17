@@ -143,7 +143,7 @@ public class FriendshipService {
     }
 
     @Transactional(readOnly = true)
-    public List<Profile> listFriends(UUID userId) {
+    private List<Profile> listFriends(UUID userId) {
         List<UUID> friendIds = friendships.listAccepted(userId).stream()
                 .map(Friendship::friendId)
                 .toList();
