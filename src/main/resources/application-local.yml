@@ -7,9 +7,11 @@ spring:
 
 snow:
   storage:
-    public-base-url: http://localhost:9000/snow-resorts-assets
+    # LAN IP so physical devices can PUT/GET avatars (same host as EXPO_PUBLIC_API_BASE_URL).
+    # Override with AVATAR_PUBLIC_BASE_URL / S3_ENDPOINT if your Mac IP differs.
+    public-base-url: ${AVATAR_PUBLIC_BASE_URL:http://192.168.3.18:9000/snow-resorts-assets}
     s3:
-      endpoint: http://localhost:9000
+      endpoint: ${S3_ENDPOINT:http://192.168.3.18:9000}
       region: us-east-1
       access-key: minioadmin
       secret-key: minioadmin
