@@ -46,8 +46,7 @@ public class FriendshipService {
     public Friendship requestByUsername(UUID requesterId, String friendUsername) {
         String normalized = ProfileService.requireValidUsername(friendUsername);
         Profile target = profiles.findByUsername(normalized)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "No user found with username '%s'.".formatted(normalized)));
+                .orElseThrow(() -> new ResourceNotFoundException("Unable to send friend request."));
         return request(requesterId, target.userId());
     }
 
@@ -142,11 +141,17 @@ public class FriendshipService {
                 .toList();
     }
 
+    /** Accepted friend ids for {@code userId} (service-to-service / leaderboard). */
     @Transactional(readOnly = true)
-    private List<Profile> listFriends(UUID userId) {
-        List<UUID> friendIds = friendships.listAccepted(userId).stream()
+    public List<UUID> listAcceptedFriendIds(UUID userId) {
+        return friendships.listAccepted(userId).stream()
                 .map(Friendship::friendId)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    private List<Profile> listFriends(UUID userId) {
+        List<UUID> friendIds = listAcceptedFriendIds(userId);
         if (friendIds.isEmpty()) {
             return List.of();
         }

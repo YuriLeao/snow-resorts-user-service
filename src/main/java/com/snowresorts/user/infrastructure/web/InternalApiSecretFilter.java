@@ -6,6 +6,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -33,10 +35,19 @@ public class InternalApiSecretFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String presented = request.getHeader(properties.header());
-        if (!properties.secret().equals(presented)) {
+        if (!constantTimeEquals(properties.secret(), presented)) {
             response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid internal API credentials.");
             return;
         }
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean constantTimeEquals(String expected, String presented) {
+        if (expected == null || presented == null) {
+            return false;
+        }
+        byte[] a = expected.getBytes(StandardCharsets.UTF_8);
+        byte[] b = presented.getBytes(StandardCharsets.UTF_8);
+        return MessageDigest.isEqual(a, b);
     }
 }

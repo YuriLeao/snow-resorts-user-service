@@ -64,7 +64,6 @@ class FriendshipServiceTest {
         when(profiles.findByUsername("target_user")).thenReturn(Optional.of(targetProfile()));
         when(friendships.find(REQUESTER, TARGET)).thenReturn(Optional.empty());
         when(friendships.save(any(Friendship.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(profiles.findById(REQUESTER)).thenReturn(Optional.of(requesterProfile()));
 
         Friendship created = service.requestByUsername(REQUESTER, "@target_user");
 
@@ -78,7 +77,8 @@ class FriendshipServiceTest {
         when(profiles.findByUsername("missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.requestByUsername(REQUESTER, "missing"))
-                .isInstanceOf(ResourceNotFoundException.class);
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Unable to send friend request");
     }
 
     @Test
@@ -86,7 +86,6 @@ class FriendshipServiceTest {
     void request_whenNoneExists_createsPending() {
         when(friendships.find(REQUESTER, TARGET)).thenReturn(Optional.empty());
         when(friendships.save(any(Friendship.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(profiles.findById(REQUESTER)).thenReturn(Optional.of(requesterProfile()));
 
         Friendship created = service.request(REQUESTER, TARGET);
 

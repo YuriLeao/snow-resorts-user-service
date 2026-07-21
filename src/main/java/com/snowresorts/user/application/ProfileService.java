@@ -169,6 +169,22 @@ public class ProfileService {
         return target.minimalView();
     }
 
+    /**
+     * Whether {@code viewerId} may see {@code ownerId}'s run stats / history / GPS replay.
+     * Requires ownership, or accepted friendship with {@code shareStats = FRIENDS}.
+     */
+    @Transactional(readOnly = true)
+    public boolean canViewStats(UUID viewerId, UUID ownerId) {
+        if (viewerId.equals(ownerId)) {
+            return true;
+        }
+        Profile owner = profiles.findById(ownerId).orElse(null);
+        if (owner == null || owner.shareStats() != ShareLevel.FRIENDS) {
+            return false;
+        }
+        return areFriends(viewerId, ownerId);
+    }
+
     private boolean areFriends(UUID callerId, UUID targetId) {
         return friendships.find(callerId, targetId)
                 .map(f -> f.status() == FriendshipStatus.ACCEPTED)

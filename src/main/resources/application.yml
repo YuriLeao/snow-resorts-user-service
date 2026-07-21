@@ -22,6 +22,10 @@ spring:
     default-schema: users
     create-schemas: true
     locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   security:
     oauth2:
       resourceserver:
@@ -38,6 +42,9 @@ snow:
     enabled: true
     public-paths:
       - /snow-resort-service/v1/users/internal/**
+    cors:
+      allowed-origins:
+        - ${CORS_ALLOWED_ORIGIN:http://localhost:8080}
   internal-api:
     secret: ${INTERNAL_API_SECRET:dev-internal-secret}
     header: X-Internal-Secret
