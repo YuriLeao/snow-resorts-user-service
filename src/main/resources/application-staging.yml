@@ -1,0 +1,9 @@
+logging:
+  structured:
+    format:
+      console: logstash
+    json:
+      add:
+        service: ${spring.application.name:user-service}
+  level:
+    root: INFO

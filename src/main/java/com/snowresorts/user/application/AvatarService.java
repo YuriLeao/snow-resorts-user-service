@@ -3,6 +3,7 @@ package com.snowresorts.user.application;
 import com.snowresorts.security.error.ForbiddenException;
 import com.snowresorts.security.error.ResourceNotFoundException;
 import com.snowresorts.security.error.UnprocessableEntityException;
+import com.snowresorts.security.logging.StructuredLogger;
 import com.snowresorts.user.domain.model.Profile;
 import com.snowresorts.user.domain.port.ObjectStorage;
 import com.snowresorts.user.domain.port.Profiles;
@@ -37,7 +38,8 @@ public class AvatarService {
     public AvatarUploadUrl createUploadUrl(UUID userId) {
         String key = avatarKey(userId);
         String url = objectStorage.presignedPutUrl(key, AVATAR_CONTENT_TYPE, properties.presignTtl());
-        log.info("Issued presigned avatar upload URL for user {}", userId);
+        StructuredLogger.of(log).info("avatar_presign", "succeeded", "issued",
+                "user_id", userId);
         return new AvatarUploadUrl(url, key, properties.presignTtl().toSeconds());
     }
 
@@ -66,7 +68,8 @@ public class AvatarService {
         Instant now = Instant.now();
         String avatarUrl = objectStorage.publicUrl(avatarS3Key) + "?v=" + now.getEpochSecond();
         Profile updated = current.withAvatar(avatarS3Key, avatarUrl, now);
-        log.info("Confirmed avatar for user {} ({} bytes)", userId, size);
+        StructuredLogger.of(log).info("avatar_confirm", "succeeded", "ok",
+                "user_id", userId, "size_bytes", size);
         return profiles.save(updated);
     }
 
@@ -79,7 +82,8 @@ public class AvatarService {
             objectStorage.delete(current.avatarS3Key());
         }
         profiles.save(current.withoutAvatar(Instant.now()));
-        log.info("Deleted avatar for user {}", userId);
+        StructuredLogger.of(log).info("avatar_delete", "succeeded", "ok",
+                "user_id", userId);
     }
 
     private static String avatarKey(UUID userId) {

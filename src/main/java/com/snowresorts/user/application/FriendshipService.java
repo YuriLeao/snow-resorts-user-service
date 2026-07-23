@@ -3,6 +3,7 @@ package com.snowresorts.user.application;
 import com.snowresorts.security.error.BadRequestException;
 import com.snowresorts.security.error.ConflictException;
 import com.snowresorts.security.error.ResourceNotFoundException;
+import com.snowresorts.security.logging.StructuredLogger;
 import com.snowresorts.user.domain.model.Friendship;
 import com.snowresorts.user.domain.model.FriendshipStatus;
 import com.snowresorts.user.domain.model.Profile;
@@ -58,7 +59,8 @@ public class FriendshipService {
         if (friendships.find(requesterId, friendId).isPresent()) {
             throw new ConflictException("A friendship or pending request already exists.");
         }
-        log.info("User {} requested friendship with {}", requesterId, friendId);
+        StructuredLogger.of(log).info("friend_request", "succeeded", "created",
+                "user_id", requesterId, "friend_id", friendId);
         return friendships.save(
                 new Friendship(requesterId, friendId, FriendshipStatus.PENDING, Instant.now()));
     }
@@ -79,7 +81,8 @@ public class FriendshipService {
         Instant now = Instant.now();
         friendships.save(new Friendship(requesterId, accepterId, FriendshipStatus.ACCEPTED, pending.createdAt()));
         friendships.save(new Friendship(accepterId, requesterId, FriendshipStatus.ACCEPTED, now));
-        log.info("User {} accepted friendship request from {}", accepterId, requesterId);
+        StructuredLogger.of(log).info("friend_accept", "succeeded", "accepted",
+                "user_id", accepterId, "friend_id", requesterId);
     }
 
     @Transactional
@@ -91,7 +94,8 @@ public class FriendshipService {
             throw new ConflictException("Friend request is not pending.");
         }
         friendships.delete(requesterId, accepterId);
-        log.info("User {} rejected friendship request from {}", accepterId, requesterId);
+        StructuredLogger.of(log).info("friend_reject", "succeeded", "rejected",
+                "user_id", accepterId, "friend_id", requesterId);
     }
 
     @Transactional
@@ -104,7 +108,8 @@ public class FriendshipService {
         }
         friendships.delete(userId, friendId);
         friendships.delete(friendId, userId);
-        log.info("User {} removed friendship with {}", userId, friendId);
+        StructuredLogger.of(log).info("friend_remove", "succeeded", "removed",
+                "user_id", userId, "friend_id", friendId);
     }
 
     @Transactional(readOnly = true)

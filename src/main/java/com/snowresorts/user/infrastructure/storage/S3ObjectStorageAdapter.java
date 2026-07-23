@@ -1,5 +1,6 @@
 package com.snowresorts.user.infrastructure.storage;
 
+import com.snowresorts.security.logging.StructuredLogger;
 import com.snowresorts.user.application.StorageProperties;
 import com.snowresorts.user.domain.port.ObjectStorage;
 import java.time.Duration;
@@ -75,7 +76,8 @@ public class S3ObjectStorageAdapter implements ObjectStorage {
                 .bucket(storageProperties.bucket())
                 .key(key)
                 .build());
-        log.debug("Deleted object {} from bucket {}", key, storageProperties.bucket());
+        StructuredLogger.of(log).debug("s3_delete", "succeeded", "ok",
+                "key", key, "bucket", storageProperties.bucket());
     }
 
     @Override

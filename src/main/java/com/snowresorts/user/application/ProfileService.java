@@ -3,6 +3,7 @@ package com.snowresorts.user.application;
 import com.snowresorts.security.error.BadRequestException;
 import com.snowresorts.security.error.ConflictException;
 import com.snowresorts.security.error.ResourceNotFoundException;
+import com.snowresorts.security.logging.StructuredLogger;
 import com.snowresorts.user.domain.model.FriendshipStatus;
 import com.snowresorts.user.domain.model.Profile;
 import com.snowresorts.user.domain.model.ShareLevel;
@@ -65,7 +66,8 @@ public class ProfileService {
             Profile profile = new Profile(userId, resolvedUsername, resolvedDisplayName,
                     null, null, null, null,
                     ShareLevel.FRIENDS, ShareLevel.FRIENDS, now, now);
-            log.info("Bootstrapped default profile for user {} (@{})", userId, resolvedUsername);
+            StructuredLogger.of(log).info("profile_bootstrap", "succeeded", "created",
+                    "user_id", userId, "username", resolvedUsername);
             return profiles.save(profile);
         });
     }
@@ -106,7 +108,8 @@ public class ProfileService {
             });
         }
         Profile updated = current.withDetails(normalizedUsername, displayName, shareStats, shareLocation, Instant.now());
-        log.info("Updating profile for user {}", userId);
+        StructuredLogger.of(log).info("profile_update", "succeeded", "owner_write",
+                "user_id", userId);
         return profiles.save(updated);
     }
 

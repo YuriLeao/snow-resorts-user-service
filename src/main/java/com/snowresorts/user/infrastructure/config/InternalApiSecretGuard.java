@@ -1,5 +1,6 @@
 package com.snowresorts.user.infrastructure.config;
 
+import com.snowresorts.security.logging.StructuredLogger;
 import com.snowresorts.user.application.InternalApiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class InternalApiSecretGuard implements ApplicationRunner {
                     "INTERNAL_API_SECRET must be set to a strong value outside local/test profiles");
         }
         if (localOrTest && DEFAULT_SECRET.equals(properties.secret())) {
-            log.warn("Using default INTERNAL_API_SECRET — acceptable only for local/test");
+            StructuredLogger.of(log).warn("internal_api_secret", "accepted", "default_secret");
         }
     }
 }
